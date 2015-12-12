@@ -143,6 +143,13 @@ module Fluent
     config_param :buffer_chunk_limit, :size, :default => 8*1024*1024
     desc 'The length limit of the chunk queue.'
     config_param :buffer_queue_limit, :integer, :default => 256
+    SUPPOTED_ACTIONS = ['exception', 'block']
+    config_param :buffer_queue_full_action, :default => :exception do |val|
+      unless SUPPOTED_ACTIONS.include?(val)
+        raise ConfigError, "unknown buffer queue action: #{val}. Supported actions are #{SUPPOTED_ACTIONS.join(', ')}"
+      end
+      val.to_sym
+    end
 
     alias chunk_limit buffer_chunk_limit
     alias chunk_limit= buffer_chunk_limit=
@@ -151,6 +158,10 @@ module Fluent
 
     def configure(conf)
       super
+
+      if @buffer_queue_full_action == :block
+        @cond_block_action = new_cond
+      end
     end
 
     def start
@@ -188,7 +199,22 @@ module Fluent
           return false
 
         elsif @queue.size >= @buffer_queue_limit
-          raise BufferQueueLimitError, "queue size exceeds limit"
+          case @buffer_queue_full_action
+          when :exception
+            raise BufferQueueLimitError, "queue size exceeds limit"
+          when :block
+            # BasicBuffer is now based on Monitor so use VariableCondition#wait with timeout here.
+            # Using Mutex and ConditionVariable#signal is better for precise control.
+            # Next Buffer API should improve this behaviour with Mutex.
+            loop {
+              if @queue.size >= @buffer_queue_limit
+                @cond_block_action.wait(1)
+              else
+                break
+              end
+            }
+            return emit(key, data, chain)
+          end
         end
 
         if data.bytesize > @buffer_chunk_limit
