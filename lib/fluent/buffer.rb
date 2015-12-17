@@ -153,6 +153,10 @@ module Fluent
 
     def configure(conf)
       super
+
+      if @buffer_queue_full_action == :block
+        @cond_block_action = new_cond
+      end
     end
 
     def start
