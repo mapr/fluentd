@@ -459,7 +459,7 @@ class RecordTransformerFilterTest < Test::Unit::TestCase
         </record>
       ]
       es = emit(config) { |d|
-        mock(d.instance.log).warn("failed to expand `${unknown['bar']}`", anything)
+        mock(d.instance.log).warn("failed to expand `\"\#{unknown['bar']}\"`", anything)
       }
       es.each do |t, r|
         assert_nil(r['message'])
