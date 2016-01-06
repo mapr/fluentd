@@ -496,4 +496,36 @@ class RecordTransformerFilterTest < Test::Unit::TestCase
       end
     end
   end
+
+  test "compatibility test (enable_ruby yes)" do
+    config = %[
+      enable_ruby yes
+      auto_typecast yes
+      <record>
+        _message   prefix-${message}-suffix
+        _time      ${Time.at(time)}
+        _number    ${number == '-' ? 0 : number}
+        _match     ${/0x[0-9a-f]+/.match(hex)[0]}
+        _timestamp ${__send__("@timestamp")}
+        _foo_bar   ${__send__('foo.bar')}
+      </record>
+    ]
+    d = create_driver(config)
+    record = {
+      "number"     => "-",
+      "hex"        => "0x10",
+      "foo.bar"    => "foo.bar",
+      "@timestamp" => 10,
+      "message"    => "10",
+    }
+    es = d.run { d.emit(record, @time) }.filtered
+    es.each do |t, r|
+      assert { r['_message'] == "prefix-#{record['message']}-suffix" }
+      assert { r['_time'] == Time.at(@time) }
+      assert { r['_number'] == 0 }
+      assert { r['_match'] == record['hex'] }
+      assert { r['_timestamp'] == record['@timestamp'] }
+      assert { r['_foo_bar'] == record['foo.bar'] }
+    end
+  end
 end
