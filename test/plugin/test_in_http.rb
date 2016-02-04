@@ -68,6 +68,10 @@ class HttpInputTest < Test::Unit::TestCase
         assert_equal "200", res.code
       }
     end
+
+    assert_equal 2, d.emits.size
+    assert_equal expected[0], d.emits[0]
+    assert_equal expected[1], d.emits[1]
   end
 
   def test_json
