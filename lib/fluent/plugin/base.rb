@@ -28,13 +28,13 @@ module Fluent
       include PluginLoggerMixin
       include PluginHelper::Mixin
 
-      def initialize; end
-      def configure(conf); end
-      def start; end
-      def stop; end
-      def shutdown; end
-      def close; end
-      def terminate; end
+      def initialize; super; end
+      def configure(conf); super; self; end
+      def start; self; end
+      def stop; self; end
+      def shutdown; self; end
+      def close; self; end
+      def terminate; self; end
     end
   end
 end

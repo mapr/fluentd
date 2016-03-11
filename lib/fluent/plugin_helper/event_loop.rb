@@ -20,6 +20,8 @@ require 'fluent/plugin_helper/thread'
 module Fluent
   module PluginHelper
     module EventLoop
+      # Currently this plugin helper is only for other helpers, not plugins.
+      # there's no way to create customized watchers to attach event loops.
       include Fluent::PluginHelper::Thread
 
       # stop     : [-]
@@ -28,6 +30,8 @@ module Fluent
       # terminate: initialize internal state
 
       EVENT_LOOP_RUN_DEFAULT_TIMEOUT = 0.2
+
+      attr_reader :_event_loop # for tests
 
       def event_loop_attach(watcher)
         @_event_loop_mutex.synchronize do

@@ -31,18 +31,27 @@ module Fluent
       # close    : close all I/O objects for child processes
       # terminate: send TERM again and again if processes stil exist, and KILL after timeout
 
-      def child_process_execute(title, command, arguments: nil, subprocess_name: nil, read: true, write: true, encoding: 'utf-8', interval: nil, immediate: false, &block)
+      def child_process_execute(title, command, arguments: nil, subprocess_name: nil, read: true, write: true, encoding: 'utf-8', interval: nil, immediate: false, parallel: false, &block)
         raise ArgumentError, "BUG: title must be a symbol" unless title.is_a? Symbol
         raise ArgumentError, "BUG: both of input and output are disabled" if !read && !write
         raise ArgumentError, "BUG: block not specified which receive i/o object" unless block_given?
         raise ArgumentError, "BUG: block must have an argument for io" unless block.arity == 1
 
         if interval
+          runnable = true
+          unless parallel
+            callback = block
+            block = ->(io){ runnable = false; callback.call(io); running = true }
+          end
           if immediate
             child_process_execute_once(title, command, arguments, subprocess_name, read, write, encoding, &block)
           end
           timer_execute(:child_process_execute, interval, repeat: true) do
-            child_process_execute_once(title, command, arguments, subprocess_name, read, write, encoding, &block)
+            if runnable
+              child_process_execute_once(title, command, arguments, subprocess_name, read, write, encoding, &block)
+            else
+              log.warn "previous child process is still running", title: title, command: command, arguments: arguments, interval: interval, parallel: parallel
+            end
           end
         else
           child_process_execute_once(title, command, arguments, subprocess_name, read, write, encoding, &block)
@@ -156,7 +165,7 @@ module Fluent
 
         m = Mutex.new
         m.lock
-        thread = thread_create do
+        thread = thread_create :child_process_callback do
           m.lock # run after plugin thread get pid, thread instance and i/o
           with_error = false
           m.unlock
@@ -173,6 +182,8 @@ module Fluent
           rescue => e
             log.warn "Unexpected error while processing I/O for child process", title: title, pid: pid, command: command, error_class: e.class, error: e
           end
+          io.close rescue nil
+          @_child_process_processes.delete(pid)
         end
         @_child_process_processes[pid] = ProcessInfo.new(thread, io, true)
         m.unlock
