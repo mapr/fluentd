@@ -42,7 +42,7 @@ module Fluent
         end
       end
 
-      def emits?
+      def has_router?
         true
       end
 
