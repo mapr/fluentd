@@ -57,6 +57,7 @@ module Fluent
             thread_exit = true
             raise
           ensure
+            ::Thread.current[:_fluentd_plugin_helper_thread_running] = false
             unless thread_exit
               log.warn "thread doesn't exit correctly (killed or other reason)", plugin: self.class, title: title
             end

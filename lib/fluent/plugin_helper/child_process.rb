@@ -69,6 +69,8 @@ module Fluent
         end
       end
 
+      ProcState = Struct.new(:running)
+
       def initialize
         super
         # plugins MAY configure this parameter

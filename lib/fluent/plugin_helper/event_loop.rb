@@ -33,6 +33,8 @@ module Fluent
 
       attr_reader :_event_loop # for tests
 
+      attr_reader :_event_loop # for tests
+
       def event_loop_attach(watcher)
         @_event_loop_mutex.synchronize do
           @_event_loop.attach(watcher)
