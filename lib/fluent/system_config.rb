@@ -18,21 +18,6 @@ require 'fluent/configurable'
 require 'fluent/config/element'
 
 module Fluent
-  module SystemConfigMixin
-    def system_config
-      @_system_config || Fluent::Engine.system_config
-    end
-
-    def system_config_override(opts={})
-      unless @_system_config
-        @_system_config = Fluent::Engine.system_config.dup
-      end
-      opts.each_pair do |key, value|
-        @_system_config.send(:"#{key.to_s}=", value)
-      end
-    end
-  end
-
   class SystemConfig
     include Configurable
 
@@ -93,6 +78,23 @@ module Fluent
         @enable_get_dump = system.enable_get_dump unless system.enable_get_dump.nil?
         @process_name = system.process_name unless system.process_name.nil?
       }
+    end
+
+    module Mixin
+      def system_config
+        require 'fluent/engine'
+        @_system_config || Fluent::Engine.system_config
+      end
+
+      def system_config_override(opts={})
+        require 'fluent/engine'
+        unless @_system_config
+          @_system_config = Fluent::Engine.system_config.dup
+        end
+        opts.each_pair do |key, value|
+          @_system_config.send(:"#{key.to_s}=", value)
+        end
+      end
     end
   end
 end
